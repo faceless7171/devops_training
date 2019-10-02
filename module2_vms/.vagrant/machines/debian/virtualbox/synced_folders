@@ -1,1 +1,0 @@
-{"rsync":{"/vagrant":{"type":"rsync","guestpath":"/vagrant","hostpath":"/home/nikolaisoroka/Documents/devops_training2/module2_vms","disabled":false,"__vagrantfile":true,"owner":"vagrant","group":"vagrant"}}}
