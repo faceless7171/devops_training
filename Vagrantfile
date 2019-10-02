@@ -1,7 +1,8 @@
 Vagrant.configure("2") do |config|
   config.vm.define :debian do |debian|
     debian.vm.box = "debian/jessie64"
-    debian.vm.hostname = "faceless7171.debian"
+    debian.vm.hostname = "faceless7171debian"
+    debian.vm.network :private_network, ip: "192.168.0.1"
 
     debian.ssh.forward_agent = true
     debian.vm.provision "shell", inline: <<-SHELL
@@ -21,6 +22,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.define :centos do |centos|
     centos.vm.box = "centos/7"
-    centos.vm.hostname = "faceless7171.centos"
+    centos.vm.hostname = "faceless7171centos"
+    debian.vm.network :private_network, ip: "192.168.0.2"
   end
 end
