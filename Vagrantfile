@@ -36,6 +36,12 @@ Vagrant.configure("2") do |config|
 
       cat /home/proj/module2.txt
     SHELL
+
+    debian.vm.provision "shell", inline: <<-SHELL
+      apt-get install -y qemu-kvm libvirt-bin bridge-utils virtinst
+      wget http://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-10.1.0-amd64-netinst.iso
+      virsh net-start default
+    SHELL
   end
 
   config.vm.define :centos do |centos|
