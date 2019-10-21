@@ -1,0 +1,8 @@
+vms:
+  debian:
+    hostname: "faceless7171debian"
+    ip: "192.168.50.1"
+
+  debian2:
+    hostname: "faceless7171debian2"
+    ip: "192.168.50.2"
