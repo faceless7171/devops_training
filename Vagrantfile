@@ -11,58 +11,25 @@ Vagrant.configure("2") do |config|
     debian.vm.network :private_network, ip: cfg['vms']['debian']['ip']
 
     debian.vm.provision "shell", inline: <<-SHELL
-      apt-get update
-      apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg2 \
-        software-properties-common
-      curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
-      echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable" >> /etc/apt/sources.list.d/docker.list
+        mkdir -p /home/vagrant/prod/random-old /home/vagrant/prod/old
+        touch /home/vagrant/prod/random-old/{6..10}
+        sudo cp -r --preserve=all /home/vagrant/prod/random-old /home/vagrant/prod/old
 
-      apt-get install docker
-    SHELL
+        mkdir -p /home/vagrant/prod/random-current /home/vagrant/prod/current
+        touch /home/vagrant/prod/random-current/{1..4}
+        sudo cp -r --no-preserve=all /home/vagrant/prod/random-current /home/vagrant/prod/current
 
-    debian.vm.provision "shell", inline: <<-SHELL
-      groupadd newgroup
-      useradd -m newuser
-      usermod -a -G newgroup newuser
-      delgroup newgroup
+        mkdir -p /home/vagrant/prod/random-new /home/vagrant/prod/new
+        touch --date=$(date --date='1 year ago') /home/vagrant/prod/random-new/{1..4}
+        sudo cp -r --preserve=timestamps /home/vagrant/prod/random-new /home/vagrant/prod/new
 
-      echo "newuser ALL=/sbin/service ssh restart" >> /etc/sudoers
-    SHELL
+        tar -czvf /home/vagrant/folders.tar.gz /home/vagrant/prod/new /home/vagrant/prod/current /home/vagrant/prod/old
 
-    debian.vm.provision "shell", inline: <<~SHELL
-        echo '[Unit]
-        Description=Test service
-        Requires=network.target
-        After=network.target
         
-        [Service]
-        Type=oneshot
-        Environment="TIME_DATE=$(/bin/date +%%s)"
-        ExecStart=/bin/sh -c "/usr/bin/touch /home/vagrant/service_created${TIME_DATE}"
-        ExecStart=/bin/sh -c "/usr/bin/dig google.com > /home/vagrant/google${TIME_DATE}"
 
-        [Install]
-        WantedBy=multi-user.target' >> /etc/systemd/system/my_service.service
+        wget https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-10.1.0-amd64-netinst.iso
 
-        systemctl enable my_service.service
-    SHELL
-
-    debian.vm.provision "shell", inline: <<~SHELL
-      apt-get update
-      apt-get install -y ntp ntpdate
-
-      echo "restrict 192.168.50.0 mask 255.255.255.0 nomodify notrap
-      server 127.127.1.0 # локальные часы
-      fudge 127.127.1.0 stratum 10
-      logfile /var/log/ntp.log" >>  /etc/ntp.conf
-
-      service ntp restart
-      update-rc.d ntp defaults
-      ntpdate -q 127.0.0.1
+        curl -L https://github.com/faceless7171/devops_training/archive/module3.zip -o mosule3.zip
     SHELL
   end
 
