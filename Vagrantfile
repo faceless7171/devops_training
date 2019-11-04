@@ -11,21 +11,23 @@ Vagrant.configure("2") do |config|
     debian.vm.network :private_network, ip: cfg['vms']['debian']['ip']
     
     debian.vm.synced_folder "./keys", "/home/vagrant/.ssh"
+    debian.vm.synced_folder "./", "/vagrant"
     # ssh
     debian.vm.provision "shell", inline: <<-SHELL
-      #cp -rf /vagrant/sshconfig /home/vagrant/.ssh/config
-      #cp -rf /vagrant/sshdconfig /etc/ssh/sshd_config
+      cp -rf /vagrant/sshdconfig /etc/ssh/sshd_config
+    SHELL
 
-      #cat /vagrant/auth_keys >> /home/vagrant/.ssh/authorized_keys
+    debian.vm.provision "shell", privileged: false, inline: <<-SHELL
+      cp -rf /vagrant/sshconfig /home/vagrant/.ssh/config
 
-      #service ssh restart
+      KEY_NAME="newkey"
+      ssh-keygen -t rsa -b 4096 -f /home/vagrant/.ssh/$KEY_NAME
+      eval "$(ssh-agent -s)"
+      ssh-add /home/vagrant/.ssh/$KEY_NAME
 
-      #KEY_NAME="newkey"
-      #ssh-keygen -t rsa -b 4096 -f /home/vagrant/.ssh/newkeys/$KEY_NAME
-      #eval "$(ssh-agent -s)"
-      #ssh-add /home/vagrant/.ssh/newkeys/$KEY_NAME
+      cp -a /home/vagrant/.ssh/$KEY_NAME.pub /vagrant/auth_keys
 
-      #cp -a /home/vagrant/.ssh/newkeys/$KEY_NAME.pub /vagrant/auth_keys
+      cat /vagrant/auth_keys >> /home/vagrant/.ssh/authorized_keys
     SHELL
 
     debian.vm.provision "shell", inline: <<-SHELL
@@ -50,7 +52,7 @@ Vagrant.configure("2") do |config|
 
         #wget -c https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-10.1.0-amd64-netinst.iso
 
-        curl -L https://github.com/faceless7171/devops_training/archive/module3.zip -o mosule3.zip
+        curl -O -L https://github.com/faceless7171/devops_training/archive/module3.zip -o module3.zip
 
         cat /proc/loadavg > la.txt
         df -h > hdd.txt
@@ -77,8 +79,18 @@ Vagrant.configure("2") do |config|
     debian2.vm.hostname = cfg['vms']['debian2']['hostname']
     debian2.vm.network :private_network, ip: cfg['vms']['debian2']['ip']
 
+    debian2.vm.synced_folder "./", "/vagrant"
+
     debian2.vm.provision "shell", inline: <<-SHELL
-      cat /vagrant/auth_keys >> /home/vagrant/.ssh/authorized_keys
+      cp -rf /vagrant/sshdconfig /etc/ssh/sshd_config
+    SHELL
+
+    debian2.vm.provision "shell", privileged: false, inline: <<-SHELL
+      cp -rf /vagrant/sshconfig /home/vagrant/.ssh/config
+      
+      cp -rf /vagrant/auth_keys /home/vagrant/.ssh/authorized_keys
+
+      systemctl restart sshd
     SHELL
   end
 end

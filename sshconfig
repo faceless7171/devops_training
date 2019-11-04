@@ -1,13 +1,13 @@
 Host *
-    Port 25
+    Port 22
     ForwardAgent yes
 
-Host 192.168.50.1
-    HostName faceless7171debian
-    Username vagrant
-    IdentityFile /home/vagrant/.ssh/newkeys/newkey
+Host vm1
+    HostName 192.168.50.1
+    User vagrant
+    IdentityFile /home/vagrant/.ssh/newkey
 
-Host 192.168.50.2
-    HostName faceless7171debian2
-    Username vagrant
-    IdentityFile /home/vagrant/.ssh/newkeys/newkey
+Host vm2
+    HostName 192.168.50.2
+    User vagrant
+    IdentityFile /home/vagrant/.ssh/newkey

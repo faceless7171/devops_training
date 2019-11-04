@@ -1,0 +1,12 @@
+vms:
+  ubuntu:
+    hostname: "ubuntu"
+    ip: "192.168.50.1"
+
+  ubuntu2:
+    hostname: "ubuntu2"
+    ip: "192.168.50.2"
+
+  ubuntu3:
+    hostname: "ubuntu3"
+    ip: "192.168.50.3"

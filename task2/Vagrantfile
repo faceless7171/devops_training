@@ -1,0 +1,37 @@
+require 'yaml'
+
+current_dir    = File.dirname(File.expand_path(__FILE__))
+cfg        = YAML.load_file("#{current_dir}/vagrant_config.yaml")
+
+
+Vagrant.configure("2") do |config|
+  config.vm.define :ubuntu do |ubuntu|
+    ubuntu.vm.box = "generic/ubuntu1804"
+    ubuntu.vm.hostname = cfg['vms']['ubuntu']['hostname']
+    ubuntu.vm.network :private_network, ip: cfg['vms']['ubuntu']['ip']
+    
+    ubuntu.vm.provision "shell", inline: <<-SHELL
+      
+    SHELL
+  end
+
+  config.vm.define :ubuntu2 do |ubuntu2|
+    ubuntu2.vm.box = "generic/ubuntu1804"
+    ubuntu2.vm.hostname = cfg['vms']['ubuntu2']['hostname']
+    ubuntu2.vm.network :private_network, ip: cfg['vms']['ubuntu2']['ip']
+
+    ubuntu2.vm.provision "shell", inline: <<-SHELL
+      
+    SHELL
+  end
+
+  config.vm.define :ubuntu3 do |ubuntu3|
+    ubuntu3.vm.box = "generic/ubuntu1804"
+    ubuntu3.vm.hostname = cfg['vms']['ubuntu3']['hostname']
+    ubuntu3.vm.network :private_network, ip: cfg['vms']['ubuntu3']['ip']
+
+    ubuntu3.vm.provision "shell", inline: <<-SHELL
+      
+    SHELL
+  end
+end
