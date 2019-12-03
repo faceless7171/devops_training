@@ -12,9 +12,11 @@ Vagrant.configure("2") do |config|
     
     ubuntu.vm.provision "shell", inline: <<-SHELL
       echo "ISSOFT_VAR=test" > /etc/environment
-      chmod +x /vagrant/scripts/*
+      chmod a+x /vagrant/scripts/*
+
+      
       systemctl disable motd
-      cp /vagrant/scripts/sysinfo.sh 
+      cp /vagrant/scripts/sysinfo.sh /etc/update-motd.d/00-header
     SHELL
   end
 end
