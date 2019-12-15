@@ -5,12 +5,12 @@ variable "vpc_id" {
 
 variable "target_port" {
   description = "target port"
-  type = number
+  type        = number
 }
 
 variable "internal" {
   description = "Indicate is LB is internal or not"
-  type = bool
+  type        = bool
 }
 
 variable "name" {

@@ -11,8 +11,8 @@ resource "aws_route_table" "main" {
 }
 
 resource "aws_route_table_association" "all" {
-  for_each = var.associations_subnet_ids
+  count = length(var.associations_subnet_ids)
 
-  subnet_id      = each.value
+  subnet_id      = var.associations_subnet_ids[count.index]
   route_table_id = aws_route_table.main.id
 }

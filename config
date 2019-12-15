@@ -1,0 +1,7 @@
+Host bastion
+   HostName 3.90.154.25
+   User ubuntu
+   IdentityFile ~/.ssh/nsoroka-key
+
+Host 10.0.*.*
+   ProxyJump bastion
