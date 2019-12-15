@@ -1,2 +1,4 @@
+devops-training-project
+terraform.tfstate*
 .terraform
 .vagrant
