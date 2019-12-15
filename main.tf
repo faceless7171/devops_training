@@ -1,5 +1,5 @@
 terraform {
-  required_version = "0.12.17"
+  required_version = "0.12.18"
 }
 
 provider "aws" {
@@ -13,7 +13,7 @@ provider "aws" {
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.cidr_block
 
   tags = {
     Name               = "nsoroka-training-vpc"
@@ -32,90 +32,91 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-resource "aws_subnet" "all" {
-  for_each = var.subnets
+resource "aws_subnet" "public" {
+  for_each = var.availability_zones
 
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = each.value.cidr_block
-  availability_zone       = each.value.availability_zone
-  map_public_ip_on_launch = each.value.map_public_ip_on_launch
+  cidr_block              = cidrsubnet(var.cidr_block, 8, each.key)
+  availability_zone       = each.value
+  map_public_ip_on_launch = true
 
   tags = {
-    Name               = each.value.name
+    Name               = "nsoroka-training-pub-sn-${each.value}"
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
 }
 
-#Route tables
-resource "aws_route_table" "main" {
-  vpc_id = aws_vpc.main.id
+resource "aws_subnet" "private_front" {
+  for_each = var.availability_zones
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = cidrsubnet(var.cidr_block, 8, 10 + each.key)
+  availability_zone = each.value
 
   tags = {
-    Name               = "nsoroka-training-rt"
+    Name               = "nsoroka-training-prfr-sn-${each.value}"
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
 }
 
-resource "aws_route_table_association" "main_a" {
-  subnet_id      = aws_subnet.all["public_a"].id
-  route_table_id = aws_route_table.main.id
-}
+resource "aws_subnet" "private_back" {
+  for_each = var.availability_zones
 
-resource "aws_route_table_association" "main_b" {
-  subnet_id      = aws_subnet.all["public_b"].id
-  route_table_id = aws_route_table.main.id
-}
-
-resource "aws_route_table" "nat" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block  = "0.0.0.0/0"
-    instance_id = aws_instance.nat.id
-  }
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = cidrsubnet(var.cidr_block, 8, 20 + each.key)
+  availability_zone = each.value
 
   tags = {
-    Name               = "nsoroka-training-rt-nat"
+    Name               = "nsoroka-training-prbk-sn-${each.value}"
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
 }
 
-resource "aws_route_table_association" "nat_a" {
-  subnet_id      = aws_subnet.all["private_a"].id
-  route_table_id = aws_route_table.nat.id
+resource "aws_subnet" "private_db" {
+  for_each = var.availability_zones
+
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = cidrsubnet(var.cidr_block, 8, 30 + each.key)
+  availability_zone = each.value
+
+  tags = {
+    Name               = "nsoroka-training-prdb-sn-${each.value}"
+    "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
+    "coherent:project" = "devops-training"
+  }
 }
 
-resource "aws_route_table_association" "nat_b" {
-  subnet_id      = aws_subnet.all["private_b"].id
-  route_table_id = aws_route_table.nat.id
+module "main_rt" {
+  source = "./modules/route_table"
+
+  name                    = "nsoroka-training-main-rt"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "0.0.0.0/0"
+  gateway_id              = aws_internet_gateway.igw.id
+  associations_subnet_ids = [aws_subnet.public.*.id]
+
+  tags = {
+    "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
+    "coherent:project" = "devops-training"
+  }
 }
 
-resource "aws_route_table_association" "nat_c" {
-  subnet_id      = aws_subnet.all["private_db_a"].id
-  route_table_id = aws_route_table.nat.id
-}
+module "nat_rt" {
+  source = "./modules/route_table"
 
-resource "aws_route_table_association" "nat_d" {
-  subnet_id      = aws_subnet.all["private_db_b"].id
-  route_table_id = aws_route_table.nat.id
-}
+  name                    = "nsoroka-training-nat-rt"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "0.0.0.0/0"
+  instance_id             = aws_instance.nat.id
+  associations_subnet_ids = [aws_subnet.private_front.*.id, aws_subnet.private_back.*.id]
 
-resource "aws_route_table_association" "nat_e" {
-  subnet_id      = aws_subnet.all["private_back_a"].id
-  route_table_id = aws_route_table.nat.id
-}
-
-resource "aws_route_table_association" "nat_f" {
-  subnet_id      = aws_subnet.all["private_back_b"].id
-  route_table_id = aws_route_table.nat.id
+  tags = {
+    "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
+    "coherent:project" = "devops-training"
+  }
 }
 
 # Security groups
@@ -188,7 +189,7 @@ resource "aws_security_group" "https" {
 # EC2
 resource "aws_key_pair" "main" {
   key_name   = "nsoroka-key"
-  public_key = file("/home/nikolaisoroka/.ssh/nsoroka-key.pub")
+  public_key = file("/home/linux/.ssh/nsoroka-key.pub")
 }
 
 resource "aws_instance" "bastion" {
@@ -197,7 +198,7 @@ resource "aws_instance" "bastion" {
   availability_zone      = "us-east-1a"
   key_name               = aws_key_pair.main.key_name
   vpc_security_group_ids = [aws_security_group.ssh.id]
-  subnet_id              = aws_subnet.all["public_a"].id
+  subnet_id              = aws_subnet.public[0].id
   user_data              = <<EOF
 #!/bin/bash
     eval "$(ssh-agent -s)"
@@ -216,7 +217,7 @@ resource "aws_instance" "nat" {
   availability_zone      = "us-east-1a"
   key_name               = aws_key_pair.main.key_name
   vpc_security_group_ids = [aws_security_group.https.id]
-  subnet_id              = aws_subnet.all["public_a"].id
+  subnet_id              = aws_subnet.public[0].id
   source_dest_check      = false
   user_data              = <<EOF
 #!/bin/bash
@@ -232,30 +233,34 @@ resource "aws_instance" "nat" {
 }
 
 resource "aws_instance" "front" {
+  for_each = var.availability_zones
+
   ami                    = "ami-04b9e92b5572fa0d1"
   instance_type          = "t2.micro"
-  availability_zone      = "us-east-1a"
+  availability_zone      = each.value
   key_name               = aws_key_pair.main.key_name
   vpc_security_group_ids = [aws_security_group.https.id]
-  subnet_id              = aws_subnet.all["private_a"].id
+  subnet_id              = aws_subnet.private_front[each.key].id
 
   tags = {
-    Name               = "nsoroka-training-front"
+    Name               = "nsoroka-training-front-${each.value}"
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
 }
 
 resource "aws_instance" "back" {
+  for_each = var.availability_zones
+
   ami                    = "ami-04b9e92b5572fa0d1"
   instance_type          = "t2.micro"
-  availability_zone      = "us-east-1a"
+  availability_zone      = each.value
   key_name               = aws_key_pair.main.key_name
   vpc_security_group_ids = [aws_security_group.https.id]
-  subnet_id              = aws_subnet.all["private_back_a"].id
+  subnet_id              = aws_subnet.private_back[each.key].id
 
   tags = {
-    Name               = "nsoroka-training-back"
+    Name               = "nsoroka-training-back-${each.value}"
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
@@ -265,15 +270,14 @@ resource "aws_instance" "back" {
 module "public_lb" {
   source = "./modules/public_lb"
 
-  vpc_id = aws_vpc.main.id
-  name = "nsoroka-training-lb"
-  target_ids = [aws_instance.front.id]
+  vpc_id              = aws_vpc.main.id
+  name                = "nsoroka-training-lb"
+  target_ids          = [aws_instance.front.id]
   security_groups_ids = [aws_security_group.https.id]
-  subnet_ids = [aws_subnet.all["public_a"].id, aws_subnet.all["public_b"].id]
-  certificate_domain = "*.test.coherentprojects.net"
+  subnet_ids          = [aws_subnet.public.*.id]
+  certificate_domain  = "*.test.coherentprojects.net"
 
   tags = {
-    env = var.environment
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
@@ -283,15 +287,15 @@ module "public_lb" {
 module "back_lb" {
   source = "./modules/network_lb"
 
-  vpc_id = aws_vpc.main.id
+  vpc_id      = aws_vpc.main.id
   target_port = 8080
-  internal = true
-  name = "nsoroka-training-back-lb"
-  target_ids = [aws_instance.back.id]
-  subnet_ids = [aws_subnet.all["private_back_a"].id, aws_subnet.all["private_back_b"].id]
+  internal    = true
+  name        = "nsoroka-training-back-lb"
+  target_ids  = [aws_instance.back.id]
+  subnet_ids  = [aws_subnet.private_back.*.id]
 
   tags = {
-    env = var.environment
+    env                = var.environment
     "coherent:owner"   = "nikolaisoroka@coherentsolutions.com"
     "coherent:project" = "devops-training"
   }
@@ -323,7 +327,7 @@ resource "aws_db_instance" "main" {
 
 resource "aws_db_subnet_group" "main" {
   name       = "nsoroka-training-db-sg"
-  subnet_ids = [aws_subnet.all["private_db_a"].id, aws_subnet.all["private_db_b"].id]
+  subnet_ids = [aws_subnet.private_db.*.id]
 
   tags = {
     Name               = "nsoroka-training-db-sg"
