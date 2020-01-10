@@ -1,0 +1,15 @@
+all:
+  hosts:
+    jenkins:
+      ansible_ssh_host: 10.0.10.157
+      ansible_user: ubuntu
+  children:
+    bastion:
+      hosts:
+        bastion1:
+          ansible_ssh_host: bastion
+    jenkins_slaves:
+      hosts:
+        slave1:
+          ansible_ssh_host: 10.0.10.249
+          ansible_user: ubuntu
