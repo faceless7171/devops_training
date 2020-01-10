@@ -189,7 +189,7 @@ resource "aws_security_group" "https" {
 # EC2
 resource "aws_key_pair" "main" {
   key_name   = "nsoroka-key"
-  public_key = file("/home/linux/.ssh/nsoroka-key.pub")
+  public_key = file("/home/nikolaisoroka/.ssh/nsoroka-key.pub")
 }
 
 resource "aws_instance" "bastion" {
