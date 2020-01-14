@@ -1,0 +1,1 @@
+ansible-playbook playbooks/jenkins.yml -i inventory/dev/default.yml -l jenkins
